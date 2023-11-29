@@ -1,45 +1,31 @@
-from django.utils import timezone
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import (ListView, DetailView,
                                   CreateView, UpdateView, DeleteView)
-from django.urls import reverse_lazy
-from django.db.models import Count
-from django.http import Http404
 
 from .forms import PostForm, CommentForm
 from .mixins import PostMixin, AuthorPassesMixin, CommentMixin
 from .models import Post, Category
-
+from .utils import annotate_comments, get_published_posts
 
 User = get_user_model()
 
 POST_LIMIT = 10
 
 
-def annotate_comments(queryset):
-    return queryset.select_related(
-        'author',
-        'category',
-        'location',
-    ).order_by('-pub_date').annotate(
-        comment_count=Count('comments'))
-
-
-def get_published_posts(queryset):
-    return queryset.filter(
-        is_published=True,
-        pub_date__lte=timezone.now(),
-        category__is_published=True,
-    )
-
-
 class IndexListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     paginate_by = POST_LIMIT
-    queryset = annotate_comments(get_published_posts(Post.objects))
+
+    def get_queryset(self):
+        queryset = Post.objects.all()
+        queryset = annotate_comments(get_published_posts(queryset))
+        return queryset
 
 
 class CategoryListView(ListView):
@@ -47,16 +33,17 @@ class CategoryListView(ListView):
     template_name = "blog/category.html"
     paginate_by = POST_LIMIT
 
-    def get_queryset(self):
-        category = get_object_or_404(
+    def get_object(self):
+        return get_object_or_404(
             Category,
             slug=self.kwargs['category_slug'],
             is_published=True
         )
-        return category.posts.filter(
-            is_published=True,
-            pub_date__lte=timezone.now(),
-        ).order_by('-pub_date').annotate(comment_count=Count('comments'))
+
+    def get_queryset(self):
+        return annotate_comments(
+            get_published_posts(self.get_object().posts)
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

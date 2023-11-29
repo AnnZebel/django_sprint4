@@ -1,13 +1,17 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 from core.models import PublishedModel
 
 User = get_user_model()
 
+LENGTH_FIELD = 256
+
+STR_LENGTH = 20
+
 
 class Category(PublishedModel):
-    title = models.CharField(max_length=256, verbose_name='Заголовок')
+    title = models.CharField(max_length=LENGTH_FIELD, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание')
     slug = models.SlugField(
         unique=True, verbose_name='Идентификатор',
@@ -20,22 +24,23 @@ class Category(PublishedModel):
         verbose_name_plural = 'Категории'
 
     def __str__(self):
-        return self.title
+        return self.title[:STR_LENGTH]
 
 
 class Location(PublishedModel):
-    name = models.CharField(max_length=256, verbose_name='Название места')
+    name = models.CharField(max_length=LENGTH_FIELD,
+                            verbose_name='Название места')
 
     class Meta:
         verbose_name = 'местоположение'
         verbose_name_plural = 'Местоположения'
 
     def __str__(self):
-        return self.name
+        return self.name[:STR_LENGTH]
 
 
 class Post(PublishedModel):
-    title = models.CharField(max_length=256, verbose_name='Заголовок')
+    title = models.CharField(max_length=LENGTH_FIELD, verbose_name='Заголовок')
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
         verbose_name='Дата и время публикации',
@@ -67,7 +72,7 @@ class Post(PublishedModel):
         verbose_name_plural = 'Публикации'
 
     def __str__(self):
-        return self.title
+        return self.title[:STR_LENGTH]
 
 
 class Comment(models.Model):
